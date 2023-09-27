@@ -1,0 +1,30 @@
+{
+    "browser_specific_settings": {
+      "gecko": {
+        "strict_min_version": "58.0a1"
+      }
+    },
+    "background":{
+      "scripts":["/javascript/main.js"]
+    },
+    "icons": {
+        "48": "/resources/icon.png"
+      },
+    "browser_action": {
+      "browser_style": true,
+      "default_title": "recipeDownloader",
+      "default_popup": "initialPopup.html"
+    },
+    "description": "download recipes from various websites to md or json",
+    "homepage_url": "https://github.com/ScatteredDrifter",
+    "manifest_version": 2,
+    "name": "recipeDownloader",
+    "permissions": [
+      "tabs",
+      "downloads",
+      "activeTab",
+      "scripting"
+    ],
+    "version": "3.0"
+  }
+  
