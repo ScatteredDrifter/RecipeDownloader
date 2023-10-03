@@ -1,42 +1,58 @@
 
+var filePrefix =""
+var selectedFileType =""
 
-window.onload(console.log("script executed"),executeDownload());
-// TODO later to be merged with received options instead
-var markdown = "markdown"
-var json = "json"
+browser.runtime.onMessage.addListener((request) => {
+    console.log("gathering message")
+    console.log(request.filePrefix);
+    console.log(request.fileType);
+    filePrefix = request.filePrefix
+    selectedFileType = request.fileType
+
+    //  executing download
+    executeDownload()
+})
+
+// window.onload(console.log("script executed"),executeDownload());
 
 
 function executeDownload(){
     
     obtainedData = gatherContent()
 
-    var convertedData = convertToMarkdown(obtainedData)
-    // console.log(convertedData)
-    
-    var convertedJson = convertToJson(obtainedData)
-    // console.log(convertedJson)
+    //  selecting which which contentType to convert to
+    var convertedData = dataToType(obtainedData,selectedFileType)
+
 
     var filename = stringToFilename(obtainedData["name"])
-    downloadRecipe(convertedData,filename,"markdown")
-    downloadRecipe(convertedJson,filename,"json")
+    
+    downloadRecipe(convertedData,filename,filePrefix,selectedFileType)
     
 }
 
-function stringToFilename(string){
-    // converts string to be filename friendly. 
-    //  this means removeing escape characters and whitespaces
-    // var regexDisallowedCharacters = /\\'/
-    convertedString = string.replaceAll(" ","-")
-    console.log(convertedString)
-    return convertedString
+function dataToType(unconvertedData,selectedFileType){
+    // function selecting which format to convert to
+    // returns the data afterwards
+    switch(selectedFileType){
+        case "markdown":
+            console.log("choosen markdown")
+
+            return convertToMarkdown(unconvertedData)
+        case "json":
+            console.log("choosen json")
+            return convertToJson(unconvertedData)
+        default:
+            return convertToMarkdown(unconvertedData)
+    }
 }
 
-function downloadRecipe(convertedFileContent,name,type){
+
+function downloadRecipe(convertedFileContent,name,filePrefix,type){
     // downloading Recipe after conversion
     console.log("downloading converted recipe")
 
     var fileEnding = determineFileEnding(type)
-    var filename = `${type}_${name}${fileEnding}`
+    var filename = `${filePrefix}${type}_${name}${fileEnding}`
 
     var downloadLink = document.createElement('a');
     downloadLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(convertedFileContent));
@@ -51,16 +67,24 @@ function downloadRecipe(convertedFileContent,name,type){
     // document.body.downloadLink(downloadLink);
 }
 
-function determineFileEnding(typeAsString){
+function stringToFilename(string){
+    // converts string to be filename friendly. 
+    //  this means removeing escape characters and whitespaces
+    // var regexDisallowedCharacters = /\\'/
+    convertedString = string.replaceAll(" ","-")
+    return convertedString
+}
+
+
+function determineFileEnding(filetype){
     // TODO convert to matching Case
-    if (typeAsString == "markdown"){
-        return ".md"
-    }
-    else if (typeAsString == "json"){
-        return ".json"
-    }
-    else {
-        return ".txt"
+    switch(filetype){
+        case "markdown":
+            return ".md"
+        case "json":
+            return ".json"
+        default:
+            return ".txt"
     }
 }
 
@@ -77,7 +101,7 @@ function convertToMarkdown(condensedRecipe){
     var markdownString = 
     `# ${condensedRecipe["name"]}: \n 
 anchored to **EnterNode** 
-s
+
 original Recipe found [here](${condensedRecipe["url"]})
 
 --- 
@@ -285,7 +309,6 @@ function ArrayToMarkdownString(ArrayToConvert){
 
 function summarizeArray(ArrayToCompress){
     // converts array to string 
-    console.log("processing array")
     var condensedString = ""
     ArrayToCompress.forEach( (item) =>{
         condensedString = condensedString + item
