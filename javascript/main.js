@@ -21,7 +21,7 @@ function initializeScript(){
     debugField = document.getElementById("debug");
 
     
-    downloadButton.addEventListener("click",startScraping);
+    downloadButton.addEventListener("click",setupDownload);
     
     
 
@@ -33,6 +33,7 @@ function updateStatusCodeField(message){
 }
 function writeDebug(message){
     debugField.innerHTML = message
+    debugField.style="display:none"
 }
 
 // function gathers the first tab from a list 
@@ -43,28 +44,54 @@ async function gatherActiveTab() {
         // success
             let tab = result[0]
             currentTab = tab
+            updateStatusCodeField(currentTab.id)
         },
         // fails
         console.error)
 }
 
+function gatherUserSelection(){
+    // function to select inputs from user 
+    var filePrefix = document.getElementById("filePrefix").value;
+    var selectedFileType = document.querySelector('input[name="filetype"]:checked').value;
 
-async function startScraping() {
+    var gatheredInput = {
+        filePrefix: filePrefix,
+        fileType:selectedFileType,
+    }
+    return gatheredInput
+}
+
+async function setupDownload() {
     updateStatusCodeField("button clicked");
     // detecting active Tab
-    await gatherActiveTab()
-    writeDebug(currentTab.id);
+    var userInput =gatherUserSelection();
+    await gatherActiveTab().then( () => {
 
-    //  executing script on given tab
+
+    })
+    // writeDebug(currentTab.id);
+
+    // sending 
     try {
         await browser.scripting.executeScript({
             target:{
                 tabId: currentTab.id,
             },
             files: ["/javascript/contentScript_nutritionfacts.js"],
-        });
+        }).then( () => { 
+
+            // sending acquired parameters to **content script**
+            const parameter = browser.tabs.sendMessage(
+                currentTab.id,
+                userInput
+            )
+
+        })
     } catch (err) { 
-        console.error(`failed to execute script ${err}`)
+        updateStatusCodeField(`failed to execute script ${err}`)
     }
+
+    
     
 }

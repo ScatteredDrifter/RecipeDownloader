@@ -7,10 +7,28 @@
     
     </head>
     <body>
-        <h1>Download Recipes</h1>
-        <button id="downloadRecipe"> Download Recipe</button>
+        <h1>Recipe Downloader</h1>
+        <div class="inputForms">
+            <input id="filePrefix" type="text" value="">
+            <label for="filePrefix">set a prefix for your file</label>
+            <br>
+            
+            <input id="filetype filetype1" type="radio" name="filetype" checked="checked" value="markdown">
+            <label for="filteype1">Markdown for Obsidian or similar</label>
+            <br>
+            <input id="filetype filetype2" type="radio" name="filetype" value="json">
+            <label for="filteype2">For Nextcloud Cookbook</label>
+            <br>
+            <input id="filetype filetype3" type="radio" name="filetype" value="txt">
+            <label for="filteype3">Plaintext as txt</label>
+            
+        </div>
+        <div class="download">
+            <p>After setting all options, click to download</p>
+            <button id="downloadRecipe"> Download Recipe</button>
+        </div>
+
         <p id="statuscode">current status:</p>
-        <p id="debug"></p>
         <script src="/javascript/main.js"></script>
     </body>
 </html>
