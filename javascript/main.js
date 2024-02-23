@@ -3,50 +3,69 @@
 
 // global variables - unfortunately :/
 var statusCodeField = null;
-var statusCodeText = "statuscode:";
+var STATUS_PREFIX = "status:";
 var debugField = null;
 var currentTab = null;
 
 // initial setup
 document.addEventListener("DOMContentLoaded", initializeScript);
 
-// function setting up environment for downloading
+
+/**
+ * loads script and adds event listener
+ */
 function initializeScript() {
   console.log("initialized script");
   var downloadButton = document.getElementById("downloadRecipe");
   statusCodeField = document.getElementById("statuscode");
   debugField = document.getElementById("debug");
 
-  downloadButton.addEventListener("click", setupDownload);
+  downloadButton.addEventListener("click", prepareDownload);
 }
 
-function updateStatusCodeField(message) {
-  statusCodeField.innerHTML = statusCodeText + message;
+// -- debug functions --
+
+/**
+ * prints debug message to the status code field
+ * @param {String} message 
+ */
+function printDebug(message) {
+  statusCodeField.innerHTML = STATUS_PREFIX + message;
 }
+
+/**
+ * write debug message to the debug field
+ * @param {String} message 
+ */
 function writeDebug(message) {
   debugField.innerHTML = message;
-  debugField.style = "display:none";
+//   debugField.style = "display:none";
 }
 
-// function gathers the first tab from a list
-// of tabs
-// sets this tabs as "currentTab"
+/**
+ * returns the actively opened tab
+ * @returns {Object} activeTab, denotes selected tab as object
+ * see https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/Tab
+ */
 async function gatherActiveTab() {
-  activeTab = await browser.tabs
+  return activeTab = await browser.tabs
     .query({ currentWindow: true, active: true })
     .then(
       (result) => {
         // success
         let tab = result[0];
         currentTab = tab;
-        updateStatusCodeField(currentTab.id);
-        return currentTab;
+        printDebug(currentTab.id);
       },
       // fails
       console.error
     );
 }
 
+/**
+ * takes user settings from popup
+ * @returns {Object} gatheredInput
+ */
 function gatherUserSelection() {
   // function to select inputs from user
   var filePrefix = document.getElementById("filePrefix").value;
@@ -61,15 +80,26 @@ function gatherUserSelection() {
   return gatheredInput;
 }
 
-async function setupDownload() {
-  updateStatusCodeField("button clicked");
+/**
+ * takes userInput and the active tab to execute the corresponding content script
+ * 
+ */
+async function prepareDownload() {
+  printDebug("button clicked");
   // detecting active Tab
   var userInput = gatherUserSelection();
+  
   var activeTab = await gatherActiveTab();
   // writeDebug(currentTab.id);
   executeScript(currentTab, userInput);
 }
 
+
+/**
+ * 
+ * @param {tab} activeTab, denotes tab to run script on
+ * @param {Object} userSelection, denotes user selection
+ */
 async function executeScript(activeTab, userSelection) {
   // executing content script to gather recipe
 
@@ -109,42 +139,75 @@ async function executeScript(activeTab, userSelection) {
           });
       });
   } catch (err) {
-    updateStatusCodeField(`failed to execute script ${err}`);
+    printDebug(`failed to execute script ${err}`);
   }
 }
 
+/**
+ * based on received website it selects the corresponding content script to run
+ * necessary because websites store their recipes differently
+ * @param {String} usedWebsite, denotes link to website
+ * @returns {Array} crawlerPath, selected content script
+ */
 function selectCrawler(usedWebsite) {
-  // function selecting which crawler to use
-  // returns the crawler afterwards
   switch (usedWebsite) {
     case "nutritionfacts":
       return ["/javascript/contentScript_nutritionfacts.js"];
   }
 }
 
-/*
+/* further websites to support may include:
 case "https://www.loveandlemons.com/":
+case "https://www.bonappetit.com/":
+case "https://www.bbcgoodfood.com/":
+case "https://www.chefkoch.de/":
+case "https://www.lecker.de/":
 case "https://www.skinnytaste.com/":
 */
 
 // ----------------- conversion of retrieved recipe -----------------
 
+/*
+The following datastructure denotes the received information about a recipe 
+the structure of this Object "unvconvertedData" is denoted as follows
+  Key:Value
+  name: String, recipe Name
+  url: String, link to original recipe
+  portion: Number, amount of portions
+  imageSource: String, link for dish preview
+  description: String, description of the dish
+  ingredients: Array, list of ingredients
+  instructions: Array, list of instructions
+*/
+
+/**
+ * 
+ * @param {Object} unconvertedData, denotes obtained data from website
+ * @param {*} selectedFileType 
+ * @returns 
+ */
 function dataToType(unconvertedData, selectedFileType) {
   // function selecting which format to convert to
   // returns the data afterwards
   switch (selectedFileType) {
     case "markdown":
-      updateStatusCodeField("choosen markdown");
+      printDebug("choosen markdown");
 
       return convertToMarkdown(unconvertedData);
     case "json":
-      updateStatusCodeField("choosen json");
+      printDebug("choosen json");
       return convertToJson(unconvertedData);
     default:
       return convertToMarkdown(unconvertedData);
   }
 }
 
+/**
+ * converts uncondensed recipe and returns string in markdown format
+ * 
+ * @param {Object} condensedRecipe, denotes unconverted data
+ * @returns {String} markdownString, denotes converted data
+ */
 function convertToMarkdown(condensedRecipe) {
   // generating markdown string to download as file
 
@@ -196,15 +259,14 @@ function ArrayToMarkdownString(ArrayToConvert) {
   return markdownListing;
 }
 
+/**
+ * takes uncondensed recipe and returns string in json format
+ * 
+ * @param {Object} condensedRecipe, denotes unconverted recipe data, see aboves definition
+ * @returns {String} convertedJson, denotes converted recipe data
+ */
 function convertToJson(condensedRecipe) {
   console.log("converting to json");
-  // given a struct with:
-  // @param condensedRecipe
-  // - name
-  // - description
-  // - ingredients
-  // - instructions
-  // returns Json
   var recipeName = condensedRecipe["name"];
   var recipeId = hashCode(recipeName);
   var jsonContent = {
@@ -237,6 +299,11 @@ function convertToJson(condensedRecipe) {
   // console.log(jsonRepresentation)
 }
 
+/**
+ * returns string denoting file ending
+ * @param {String} filetype, denotes type of file
+ * @returns {String}, denotes file ending
+ */
 function determineFileEnding(filetype) {
   // TODO convert to matching Case
   switch (filetype) {
@@ -249,6 +316,12 @@ function determineFileEnding(filetype) {
   }
 }
 
+/**
+ * removes whitespace from string and replaces it with "-"
+ * 
+ * @param {String} string 
+ * @returns {String} convertedString, denotes converted string
+ */
 function stringToFilename(string) {
   // converts string to be filename friendly.
   //  this means removeing escape characters and whitespaces
@@ -257,7 +330,14 @@ function stringToFilename(string) {
   return convertedString;
 }
 
-// downloading recipe to file
+/**
+ * takes converted recipe and downloads it as file
+ * FIXME create custom datatype!
+ * @param {String} convertedFileContent, denotes converted recipe 
+ * @param {String} filename, denotes name of file 
+ * @param {String} filePrefix 
+ * @param {String} type 
+ */
 function downloadRecipe(convertedFileContent, filename, filePrefix, type) {
   // downloading Recipe after conversion
   console.log("downloading converted recipe");
